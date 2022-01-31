@@ -25,15 +25,21 @@ func main() {
 	}()
 
 	queue := services.NewQueue()
+	stopSignal := make(chan bool)
 
 	go dataProcessor(ctx, queue)
 	go dataCleaner(ctx, queue)
-	go addDataToQueue(ctx, queue)
+	go addDataToQueue(ctx, queue, stopSignal)
 
 	select {
 	case <-c:
 		fmt.Println("cancel operation")
-		cancel()
+		for {
+			if len(queue.Items) == 0 {
+				cancel()
+			}
+		}
+
 	case <-ctx.Done():
 		time.Sleep(600 * time.Millisecond)
 	}
@@ -41,7 +47,7 @@ func main() {
 	fmt.Println("done")
 }
 
-func addDataToQueue(ctx context.Context, queue *services.Queue) {
+func addDataToQueue(ctx context.Context, queue *services.Queue, stopSignal chan bool) {
 	for i := 0; ; i++ {
 		task := models.Task{
 			ID:           uuid.NewString(),
@@ -56,6 +62,8 @@ func addDataToQueue(ctx context.Context, queue *services.Queue) {
 		select {
 		case <-ctx.Done():
 			fmt.Println("from data add")
+			return
+		case <-stopSignal:
 			return
 		default:
 			time.Sleep(500 * time.Millisecond)
