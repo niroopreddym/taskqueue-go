@@ -42,7 +42,7 @@ func main() {
 }
 
 func addDataToQueue(ctx context.Context, queue *services.Queue) {
-	for i := 0; i < 3; i++ {
+	for i := 0; ; i++ {
 		task := models.Task{
 			ID:           uuid.NewString(),
 			IsCompleted:  false,
