@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/niroopreddym/taskqueue-go/enums"
@@ -14,6 +15,7 @@ type Queue struct {
 	Items             []models.Task
 	ExecutorItems     chan models.Task
 	ReadyToCleanItems chan models.Task
+	Mutex             *sync.RWMutex
 }
 
 //NewQueue is ctor
@@ -22,20 +24,24 @@ func NewQueue() *Queue {
 	items := []models.Task{}
 	readToCleanItems := make(chan models.Task, 10)
 	ExecutorItems := make(chan models.Task, 10)
+	mutex := sync.RWMutex{}
 	// return queue
-	return &Queue{items, ExecutorItems, readToCleanItems}
+	return &Queue{items, ExecutorItems, readToCleanItems, &mutex}
 }
 
 //Adder adds the items to Queue
 func (q *Queue) Adder(ctx context.Context, i models.Task) {
 	fmt.Println("added task data:", i)
 	// append item to items
+	q.Mutex.Lock()
 	q.Items = append(q.Items, i)
 	q.ExecutorItems <- i
+	q.Mutex.Unlock()
 }
 
 //Cleaner removes the item to Queue
 func (q *Queue) Cleaner(c context.Context, cleaningItem models.Task) error {
+	q.Mutex.Lock()
 	items := q.Items
 	for index, val := range items {
 		if cleaningItem.Status == enums.Completed && val.ID == cleaningItem.ID {
@@ -43,11 +49,13 @@ func (q *Queue) Cleaner(c context.Context, cleaningItem models.Task) error {
 			fmt.Println("removed item:", removedItem)
 			copy(items[index:], items[index+1:])
 			items = items[:len(items)-1]
-			q.Items = items
-		}
 
+			q.Items = items
+
+		}
 	}
 
+	q.Mutex.Unlock()
 	select {
 	case <-c.Done():
 		fmt.Println("done on ctx cleaner")
@@ -63,7 +71,7 @@ func (q *Queue) Cleaner(c context.Context, cleaningItem models.Task) error {
 func (q *Queue) Executor(c context.Context) error {
 	select {
 	case item := <-q.ExecutorItems:
-		//push the data to chan and mke the status is true
+		//push the data to chan and make the status is true
 		item.IsCompleted = true
 		item.Status = enums.Completed
 		time.Sleep(500 * time.Millisecond)

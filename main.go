@@ -37,7 +37,10 @@ func main() {
 		fmt.Println("")
 		stopSignal <- true
 		for {
-			if len(queue.Items) == 0 {
+			queue.Mutex.RLock()
+			items := queue.Items
+			queue.Mutex.RUnlock()
+			if len(items) == 0 {
 				break
 			}
 		}
