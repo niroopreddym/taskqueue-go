@@ -32,7 +32,7 @@ func main() {
 
 	select {
 	case <-c:
-		fmt.Println("cancel oepration")
+		fmt.Println("cancel operation")
 		cancel()
 	case <-ctx.Done():
 		time.Sleep(600 * time.Millisecond)

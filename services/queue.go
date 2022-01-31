@@ -50,6 +50,7 @@ func (q *Queue) Cleaner(c context.Context, cleaningItem models.Task) error {
 
 	select {
 	case <-c.Done():
+		fmt.Println("done on ctx cleaner")
 		return c.Err()
 	default:
 		time.Sleep(1 * 1000)
@@ -72,6 +73,7 @@ func (q *Queue) Executor(c context.Context) error {
 
 	// mark queue as empty if last item is dequeued or update items
 	case <-c.Done():
+		fmt.Println("done on ctx executor")
 		return c.Err()
 	}
 
