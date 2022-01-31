@@ -34,11 +34,15 @@ func main() {
 	select {
 	case <-c:
 		fmt.Println("cancel operation")
+		fmt.Println("")
+		stopSignal <- true
 		for {
 			if len(queue.Items) == 0 {
-				cancel()
+				break
 			}
 		}
+
+		cancel()
 
 	case <-ctx.Done():
 		time.Sleep(600 * time.Millisecond)
