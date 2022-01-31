@@ -9,6 +9,6 @@ import (
 //IQueue ...
 type IQueue interface {
 	Adder(ctx context.Context, task *models.Task) error
-	Cleaner(context.Context) error
+	Cleaner(c context.Context, cleaningItem models.Task) error
 	Executor(c context.Context) error
 }

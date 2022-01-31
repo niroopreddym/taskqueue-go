@@ -24,11 +24,11 @@ func main() {
 		cancel()
 	}()
 
-	//deal with enqueue
 	queue := services.NewQueue()
-	addDataToQueue(ctx, queue)
+
 	go dataProcessor(ctx, queue)
 	go dataCleaner(ctx, queue)
+	go addDataToQueue(ctx, queue)
 
 	select {
 	case <-c:
@@ -42,7 +42,7 @@ func main() {
 }
 
 func addDataToQueue(ctx context.Context, queue *services.Queue) {
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		task := models.Task{
 			ID:           uuid.NewString(),
 			IsCompleted:  false,
@@ -51,25 +51,24 @@ func addDataToQueue(ctx context.Context, queue *services.Queue) {
 			TaskData:     "test data",
 		}
 
-		queue.Adder(ctx, &task)
+		queue.Adder(ctx, task)
 
 		select {
 		case <-ctx.Done():
+			fmt.Println("from data add")
 			return
 		default:
-			fmt.Println("from addDataToQueue")
+			time.Sleep(500 * time.Millisecond)
 		}
-
-		time.Sleep(500 * time.Millisecond)
 	}
 }
 
 func dataProcessor(ctx context.Context, queue *services.Queue) {
-	fmt.Println("inside data processor")
+	// fmt.Println("inside data processor")
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("from dataprocessor")
+			fmt.Println("from data processor")
 			return
 		default:
 			err := queue.Executor(ctx)
@@ -82,17 +81,14 @@ func dataProcessor(ctx context.Context, queue *services.Queue) {
 }
 
 func dataCleaner(ctx context.Context, queue *services.Queue) {
-	fmt.Println("inside data cleaner")
+	// fmt.Println("inside data cleaner")
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("from dataprocessor")
+			fmt.Println("from data cleaner")
 			return
-		case <-queue.IsEmpty:
-			fmt.Println("no data to clean up")
-			return
-		case <-queue.ReadyToCleanItems:
-			queue.Cleaner(ctx)
+		case data := <-queue.ReadyToCleanItems:
+			queue.Cleaner(ctx, data)
 		default:
 			time.Sleep(1 * time.Second)
 		}
